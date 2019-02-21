@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace Roave\BetterReflection\SourceLocator\Reflection;
+namespace Roave\BetterReflection\SourceLocator\StubLocator;
 
-use PhpParser\Builder;
 use PhpParser\Builder\Class_;
 use PhpParser\Builder\Declaration;
+use PhpParser\Builder\Function_;
 use PhpParser\Builder\Interface_;
 use PhpParser\Builder\Method;
 use PhpParser\Builder\Param;
@@ -27,22 +27,22 @@ use PhpParser\NodeAbstract;
 use PhpParser\PrettyPrinter\Standard;
 use ReflectionClass as CoreReflectionClass;
 use ReflectionClassConstant;
+use ReflectionFunction as CoreReflectionFunction;
 use ReflectionMethod as CoreReflectionMethod;
 use ReflectionParameter;
 use ReflectionProperty as CoreReflectionProperty;
 use ReflectionType as CoreReflectionType;
-use Reflector as CoreReflector;
 use function array_diff;
 use function array_key_exists;
 use function explode;
 use function in_array;
 
 /**
- * Function that generates a stub source from a given reflection instance.
+ * Class that generates a stub source from a given core reflection instance.
  *
  * @internal
  */
-final class SourceStubber
+final class CoreReflectionStubLocator implements StubLocator
 {
     /** @var BuilderFactory */
     private $builderFactory;
@@ -56,8 +56,12 @@ final class SourceStubber
         $this->prettyPrinter  = new Standard(['shortArraySyntax' => true]);
     }
 
-    public function __invoke(CoreReflectionClass $classReflection) : string
+    public function findClassStub(CoreReflectionClass $classReflection) : ?string
     {
+        if (! $classReflection->isInternal()) {
+            return null;
+        }
+
         $classNode = $this->createClass($classReflection);
 
         if ($classNode instanceof Class_) {
@@ -73,18 +77,30 @@ final class SourceStubber
             $this->addTraitUse($classNode, $classReflection);
         }
 
-        $this->addDocComment($classNode, $classReflection);
         $this->addConstants($classNode, $classReflection);
         $this->addMethods($classNode, $classReflection);
 
         if (! $classReflection->inNamespace()) {
-            return $this->prettyPrinter->prettyPrint([$classNode->getNode()]);
+            return $this->prettyPrinter->prettyPrintFile([$classNode->getNode()]);
         }
 
         $namespaceNode = $this->builderFactory->namespace($classReflection->getNamespaceName());
         $namespaceNode->addStmt($classNode);
 
-        return $this->prettyPrinter->prettyPrint([$namespaceNode->getNode()]);
+        return $this->prettyPrinter->prettyPrintFile([$namespaceNode->getNode()]);
+    }
+
+    public function findFunctionStub(CoreReflectionFunction $functionReflection) : ?string
+    {
+        if (! $functionReflection->isInternal()) {
+            return null;
+        }
+
+        $functionNode = $this->createFunction($functionReflection);
+
+        $this->addFunctionParameters($functionNode, $functionReflection);
+
+        return $this->prettyPrinter->prettyPrintFile([$functionNode->getNode()]);
     }
 
     /**
@@ -104,16 +120,11 @@ final class SourceStubber
     }
 
     /**
-     * @param Class_|Interface_|Trait_|Method|Property                        $node
-     * @param CoreReflectionClass|CoreReflectionMethod|CoreReflectionProperty $reflection
+     * @return Function_
      */
-    private function addDocComment(Builder $node, CoreReflector $reflection) : void
+    private function createFunction(CoreReflectionFunction $functionReflection) : Declaration
     {
-        if ($reflection->getDocComment() === false) {
-            return;
-        }
-
-        $node->setDocComment(new Doc($reflection->getDocComment()));
+        return $this->builderFactory->function($functionReflection->getShortName());
     }
 
     private function addClassModifiers(Class_ $classNode, CoreReflectionClass $classReflection) : void
@@ -189,7 +200,6 @@ final class SourceStubber
             $propertyNode = $this->builderFactory->property($propertyReflection->getName());
 
             $this->addPropertyModifiers($propertyNode, $propertyReflection);
-            $this->addDocComment($propertyNode, $propertyReflection);
 
             if (array_key_exists($propertyReflection->getName(), $defaultProperties)) {
                 $propertyNode->setDefault($defaultProperties[$propertyReflection->getName()]);
@@ -278,7 +288,6 @@ final class SourceStubber
             $methodNode = $this->builderFactory->method($methodReflection->getName());
 
             $this->addMethodFlags($methodNode, $methodReflection);
-            $this->addDocComment($methodNode, $methodReflection);
             $this->addParameters($methodNode, $methodReflection);
 
             $returnType = $methodReflection->getReturnType();
@@ -341,6 +350,23 @@ final class SourceStubber
         }
 
         $methodNode->makeReturnByRef();
+    }
+
+    private function addFunctionParameters(
+        Function_ $functionNode,
+        CoreReflectionFunction $functionReflection
+    ) : void {
+        foreach ($functionReflection->getParameters() as $parameterReflection) {
+            $parameterNode = $this->builderFactory->param($parameterReflection->getName());
+
+            $this->addParameterModifiers($parameterReflection, $parameterNode);
+
+            if ($parameterReflection->isOptional() && ! $parameterReflection->isVariadic()) {
+                $parameterNode->setDefault($this->parameterDefaultValue($parameterReflection, $functionReflection));
+            }
+
+            $functionNode->addParam($this->addParameterModifiers($parameterReflection, $parameterNode));
+        }
     }
 
     private function addParameters(Method $methodNode, CoreReflectionMethod $methodReflection) : void
