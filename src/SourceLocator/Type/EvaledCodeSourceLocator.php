@@ -11,7 +11,10 @@ use Roave\BetterReflection\SourceLocator\Ast\Locator;
 use Roave\BetterReflection\SourceLocator\Exception\InvalidFileLocation;
 use Roave\BetterReflection\SourceLocator\Located\EvaledLocatedSource;
 use Roave\BetterReflection\SourceLocator\Located\LocatedSource;
-use Roave\BetterReflection\SourceLocator\Reflection\SourceStubber;
+use Roave\BetterReflection\SourceLocator\StubLocator\AggregateStubLocator;
+use Roave\BetterReflection\SourceLocator\StubLocator\BetterReflectionStubLocator;
+use Roave\BetterReflection\SourceLocator\StubLocator\CoreReflectionStubLocator;
+use Roave\BetterReflection\SourceLocator\StubLocator\StubLocator;
 use function class_exists;
 use function file_exists;
 use function interface_exists;
@@ -19,14 +22,18 @@ use function trait_exists;
 
 final class EvaledCodeSourceLocator extends AbstractSourceLocator
 {
-    /** @var SourceStubber */
-    private $stubber;
+    /** @var StubLocator */
+    private $stubLocator;
 
-    public function __construct(Locator $astLocator)
+    public function __construct(Locator $astLocator, ?StubLocator $stubLocator = null)
     {
         parent::__construct($astLocator);
 
-        $this->stubber = new SourceStubber();
+        $this->stubLocator = $stubLocator ??
+             new AggregateStubLocator(
+                 new BetterReflectionStubLocator(),
+                 new CoreReflectionStubLocator()
+             );
     }
 
     /**
@@ -43,11 +50,9 @@ final class EvaledCodeSourceLocator extends AbstractSourceLocator
             return null;
         }
 
-        $stubber = $this->stubber;
+        $stub = $this->stubLocator->findClassStub($classReflection);
 
-        return new EvaledLocatedSource(
-            "<?php\n\n" . $stubber($classReflection)
-        );
+        return $stub === null ? null : new EvaledLocatedSource($stub);
     }
 
     private function getInternalReflectionClass(Identifier $identifier) : ?ReflectionClass
