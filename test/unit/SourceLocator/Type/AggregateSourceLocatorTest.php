@@ -92,7 +92,7 @@ class AggregateSourceLocatorTest extends TestCase
     {
         $identifier = new Identifier('Foo', new IdentifierType(IdentifierType::IDENTIFIER_CLASS));
 
-        $locator1 = new StringSourceLocator('<?php', $this->astLocator);
+        $locator1 = new StringSourceLocator('<?php ', $this->astLocator);
         $locator2 = new StringSourceLocator('<?php class Foo {}', $this->astLocator);
 
         $aggregate = new AggregateSourceLocator([$locator1, $locator2]);

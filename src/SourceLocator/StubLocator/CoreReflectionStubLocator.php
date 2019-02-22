@@ -58,10 +58,6 @@ final class CoreReflectionStubLocator implements StubLocator
 
     public function findClassStub(CoreReflectionClass $classReflection) : ?string
     {
-        if (! $classReflection->isInternal()) {
-            return null;
-        }
-
         $classNode = $this->createClass($classReflection);
 
         if ($classNode instanceof Class_) {
@@ -92,10 +88,6 @@ final class CoreReflectionStubLocator implements StubLocator
 
     public function findFunctionStub(CoreReflectionFunction $functionReflection) : ?string
     {
-        if (! $functionReflection->isInternal()) {
-            return null;
-        }
-
         $functionNode = $this->createFunction($functionReflection);
 
         $this->addFunctionParameters($functionNode, $functionReflection);

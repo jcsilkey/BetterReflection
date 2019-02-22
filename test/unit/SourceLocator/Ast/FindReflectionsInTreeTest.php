@@ -39,7 +39,7 @@ class FindReflectionsInTreeTest extends TestCase
 
         /** @var Reflector|PHPUnit_Framework_MockObject_MockObject $reflector */
         $reflector     = $this->createMock(Reflector::class);
-        $locatedSource = new LocatedSource('<?php', null);
+        $locatedSource = new LocatedSource("<?php\n", null);
 
         self::assertSame(
             [],

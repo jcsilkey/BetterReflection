@@ -102,7 +102,7 @@ class LocatorTest extends TestCase
 
     public function testReflectThrowsExeptionWhenClassNotFoundAndNoNodesExist() : void
     {
-        $php = '<?php';
+        $php = "<?php\n";
 
         $this->expectException(IdentifierNotFound::class);
         $this->locator->findReflection(
