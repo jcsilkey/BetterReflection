@@ -2,8 +2,9 @@
 
 declare(strict_types=1);
 
-namespace Roave\BetterReflection\SourceLocator\StubLocator;
+namespace Roave\BetterReflection\SourceLocator\Stubber;
 
+use PhpParser\Builder;
 use PhpParser\Builder\Class_;
 use PhpParser\Builder\Declaration;
 use PhpParser\Builder\Function_;
@@ -32,6 +33,7 @@ use ReflectionMethod as CoreReflectionMethod;
 use ReflectionParameter;
 use ReflectionProperty as CoreReflectionProperty;
 use ReflectionType as CoreReflectionType;
+use Reflector as CoreReflector;
 use function array_diff;
 use function array_key_exists;
 use function explode;
@@ -42,7 +44,7 @@ use function in_array;
  *
  * @internal
  */
-final class CoreReflectionStubLocator implements StubLocator
+final class CoreReflectionStubber implements Stubber
 {
     /** @var BuilderFactory */
     private $builderFactory;
@@ -73,6 +75,7 @@ final class CoreReflectionStubLocator implements StubLocator
             $this->addTraitUse($classNode, $classReflection);
         }
 
+        $this->addDocComment($classNode, $classReflection);
         $this->addConstants($classNode, $classReflection);
         $this->addMethods($classNode, $classReflection);
 
@@ -109,6 +112,19 @@ final class CoreReflectionStubLocator implements StubLocator
         }
 
         return $this->builderFactory->class($classReflection->getShortName());
+    }
+
+    /**
+     * @param Class_|Interface_|Trait_|Method|Property                        $node
+     * @param CoreReflectionClass|CoreReflectionMethod|CoreReflectionProperty $reflection
+     */
+    private function addDocComment(Builder $node, CoreReflector $reflection) : void
+    {
+        if ($reflection->getDocComment() === false) {
+            return;
+        }
+
+        $node->setDocComment(new Doc($reflection->getDocComment()));
     }
 
     /**
@@ -192,6 +208,7 @@ final class CoreReflectionStubLocator implements StubLocator
             $propertyNode = $this->builderFactory->property($propertyReflection->getName());
 
             $this->addPropertyModifiers($propertyNode, $propertyReflection);
+            $this->addDocComment($propertyNode, $propertyReflection);
 
             if (array_key_exists($propertyReflection->getName(), $defaultProperties)) {
                 $propertyNode->setDefault($defaultProperties[$propertyReflection->getName()]);
@@ -280,6 +297,7 @@ final class CoreReflectionStubLocator implements StubLocator
             $methodNode = $this->builderFactory->method($methodReflection->getName());
 
             $this->addMethodFlags($methodNode, $methodReflection);
+            $this->addDocComment($methodNode, $methodReflection);
             $this->addParameters($methodNode, $methodReflection);
 
             $returnType = $methodReflection->getReturnType();

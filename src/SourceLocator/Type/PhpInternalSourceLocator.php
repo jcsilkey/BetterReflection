@@ -13,10 +13,10 @@ use Roave\BetterReflection\SourceLocator\Ast\Locator;
 use Roave\BetterReflection\SourceLocator\Exception\InvalidFileLocation;
 use Roave\BetterReflection\SourceLocator\Located\InternalLocatedSource;
 use Roave\BetterReflection\SourceLocator\Located\LocatedSource;
-use Roave\BetterReflection\SourceLocator\StubLocator\AggregateStubLocator;
-use Roave\BetterReflection\SourceLocator\StubLocator\BetterReflectionStubLocator;
-use Roave\BetterReflection\SourceLocator\StubLocator\CoreReflectionStubLocator;
-use Roave\BetterReflection\SourceLocator\StubLocator\StubLocator;
+use Roave\BetterReflection\SourceLocator\Stubber\AggregateStubber;
+use Roave\BetterReflection\SourceLocator\Stubber\BetterReflectionStubber;
+use Roave\BetterReflection\SourceLocator\Stubber\CoreReflectionStubber;
+use Roave\BetterReflection\SourceLocator\Stubber\Stubber;
 use function class_exists;
 use function function_exists;
 use function interface_exists;
@@ -24,17 +24,17 @@ use function trait_exists;
 
 final class PhpInternalSourceLocator extends AbstractSourceLocator
 {
-    /** @var StubLocator */
-    private $stubLocator;
+    /** @var Stubber */
+    private $stubber;
 
-    public function __construct(Locator $astLocator, ?StubLocator $stubLocator = null)
+    public function __construct(Locator $astLocator, ?Stubber $stubber = null)
     {
         parent::__construct($astLocator);
 
-        $this->stubLocator = $stubLocator ??
-             new AggregateStubLocator(
-                 new BetterReflectionStubLocator(),
-                 new CoreReflectionStubLocator()
+        $this->stubber = $stubber ??
+             new AggregateStubber(
+                 new BetterReflectionStubber(),
+                 new CoreReflectionStubber()
              );
     }
 
@@ -61,11 +61,11 @@ final class PhpInternalSourceLocator extends AbstractSourceLocator
     private function findStub(Reflector $reflection) : ?string
     {
         if ($reflection instanceof ReflectionClass) {
-            return $this->stubLocator->findClassStub($reflection);
+            return $this->stubber->findClassStub($reflection);
         }
 
         if ($reflection instanceof ReflectionFunction) {
-            return $this->stubLocator->findFunctionStub($reflection);
+            return $this->stubber->findFunctionStub($reflection);
         }
 
         return null;

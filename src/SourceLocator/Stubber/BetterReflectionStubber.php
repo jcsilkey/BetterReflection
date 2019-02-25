@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Roave\BetterReflection\SourceLocator\StubLocator;
+namespace Roave\BetterReflection\SourceLocator\Stubber;
 
 use ReflectionClass as CoreReflectionClass;
 use ReflectionFunction as CoreReflectionFunction;
@@ -17,7 +17,7 @@ use function preg_match;
  *
  * @internal
  */
-final class BetterReflectionStubLocator implements StubLocator
+final class BetterReflectionStubber implements Stubber
 {
     public function findClassStub(CoreReflectionClass $classReflection) : ?string
     {

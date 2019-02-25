@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Roave\BetterReflection\SourceLocator\StubLocator;
+namespace Roave\BetterReflection\SourceLocator\Stubber;
 
 use ReflectionClass as CoreReflectionClass;
 use ReflectionFunction as CoreReflectionFunction;
@@ -12,7 +12,7 @@ use ReflectionFunction as CoreReflectionFunction;
  *
  * @internal
  */
-interface StubLocator
+interface Stubber
 {
     public function findClassStub(CoreReflectionClass $classReflection) : ?string;
 
